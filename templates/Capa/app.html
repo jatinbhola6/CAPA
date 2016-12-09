@@ -1,0 +1,126 @@
+{% load staticfiles %}
+
+<!doctype html>
+<html>
+  <head>
+    <title>CAPA</title>
+    <link rel="stylesheet" href="{% static 'Capa/css/bootstrap.css' %}"/>
+    <link rel="stylesheet" href="{% static 'Capa/css/custom.css' %}"/>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="page-header text-center">
+        <h1>CAPA</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-xs-6 col-xs-offset-3">
+          <ul class="list-group js-chat-log">
+          </ul>
+		  {% csrf_token %}
+          <div class="input-group input-group-lg">
+            <input type="text" class="form-control js-text" placeholder="Type something to begin..."/>
+            <span class="input-group-btn">
+              <button class="btn btn-primary js-say">Submit</button>
+            </span>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+    <script src="{% static 'Capa/js/jquery.js' %}"></script>
+    <script src="{% static 'Capa/js/js.cookie.js' %}"></script>
+    <script src="{% static 'Capa/js/bootstrap.js' %}"></script>
+	<script>
+	var chatterbotUrl = "{% url 'Capa:chatterbot' %}";
+	var csrftoken = Cookies.get('csrftoken');
+	var inputData={};
+	var loc=[]
+	function csrfSafeMethod(method) {
+		return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
+	$.ajaxSetup({
+		beforeSend: function(xhr, settings) {
+			if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+				xhr.setRequestHeader("X-CSRFToken", csrftoken);
+						
+					//headers:{"X-CSRFToken":getCookie('csrftoken')
+				}
+			}
+	});
+
+	var $chatlog = $('.js-chat-log');
+	var $input = $('.js-text');
+	var $sayButton = $('.js-say');
+			
+	function createRow(text) {
+		var $row = $('<li class="list-group-item"></li>');
+		$row.html(text);
+		$chatlog.append($row);
+	}
+	function getLocation() {
+		if (navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(showPosition, showError);
+		} 
+		else {
+			alert("Geolocation is not supported by this browser.");
+		}
+	}
+			
+	function showPosition(position) {
+		loc=[position.coords.latitude,position.coords.longitude];
+	}
+
+	function showError(error) {
+		switch(error.code) {
+		case error.PERMISSION_DENIED:
+			alert("User denied the request for Geolocation.")
+			break;
+		case error.POSITION_UNAVAILABLE:
+			alert("Location information is unavailable.")
+			break;
+		case error.TIMEOUT:
+			alert("The request to get user location timed out.")
+			break;
+	    case error.UNKNOWN_ERROR:
+	    	alert("An unknown error occurred.")
+	    	break;
+	    }
+	}
+	function submitInput() {
+		inputData['text']= $input.val()   	
+		if ($input.val().startsWith("#nearme")){
+			inputData['loc']=loc	
+		}        
+		createRow(inputData.text);
+		var $submit = $.ajax({
+			type: 'POST',
+			url: chatterbotUrl,
+			data: JSON.stringify(inputData),
+			contentType: 'application/json'
+		});
+		$submit.done(function(statement) {
+			createRow(statement.text);
+			$input.val('');
+		});
+		$submit.fail(function() {
+			createRow("panga pae gaya");
+		});
+	}
+		$sayButton.click(function() {
+			submitInput();
+		});
+
+		$input.keydown(function(event) {
+			if (event.keyCode == 13) {      		
+	    		submitInput();
+	  		}
+		});
+		$(document).ready(function(){
+			getLocation()	
+		});
+	      	
+</script>
+  </body>
+</html>
